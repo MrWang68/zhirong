@@ -71,28 +71,58 @@ void SerialDispCCDImage(int xSize, int ySize, uint8_t** ppData,uint8_t* upDateIm
     {
         for(x = 0; x < (xSize/8); x++)
         {
-            *(upDateImage+(x-1)*8+y*xSize+0)=(ppData[y][x]>>7) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+1)=(ppData[y][x]>>6) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+2)=(ppData[y][x]>>5) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+3)=(ppData[y][x]>>4) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+4)=(ppData[y][x]>>3) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+5)=(ppData[y][x]>>2) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+6)=(ppData[y][x]>>1) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+7)=(ppData[y][x]>>0) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+0)=(ppData[y][x]>>6) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+1)=(ppData[y][x]>>5) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+2)=(ppData[y][x]>>4) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+3)=(ppData[y][x]>>3) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+4)=(ppData[y][x]>>2) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+5)=(ppData[y][x]>>1) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+6)=(ppData[y][x]>>0) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+7)=(ppData[y][x+1]>>7) & 0x01;
         }
     }
-    /*
-    for(y = 0; y < ySize; y++)
+    
+
+    
+}
+void show(uint8_t* upDateImage,uint8_t** ppData){
+    int y,x;
+    #if 1
+        for(y = 0; y < 60; y++)
     {
-        for(x = 0; x < xSize; x++)
+        printf("%4d",60-y);
+        for(x = 0; x < 80; x++)
         {
-            printf("%d",*(upDateImage+x+y*xSize));
+            printf("%d",*(upDateImage+x+y*80));
         }
         printf("\r\n");
     }
-    */
+    #endif
+    #if 0
+    for(y = 0; y < 60; y++)
+    {
+        for(x = 1; x < (80/8)+1; x++)
+        {
+            printf("%d",(ppData[y][x]>>7) & 0x01);
+            printf("%d",(ppData[y][x]>>6) & 0x01);
+            printf("%d",(ppData[y][x]>>5) & 0x01);
+            printf("%d",(ppData[y][x]>>4) & 0x01);
+            printf("%d",(ppData[y][x]>>3) & 0x01);
+            printf("%d",(ppData[y][x]>>2) & 0x01);
+            printf("%d",(ppData[y][x]>>1) & 0x01);
+            printf("%d",(ppData[y][x]>>0) & 0x01);
+            if(x == 80/8)
+                printf("\r\n");   
+        }
+        if(y==60 -1)
+        {
+            printf("                                                                                ");
+            printf("\r\n");  
+        }				
+    }
+    #endif
 }
-int PWM_Motor=7100;
+int PWM_Motor=7700;
 float P=0.4,I=0,D=0;
 
 float g_fDirectionControlOut2=0,g_fDirectionControlOutOld=0,g_fDirectionControlOutNew=0,V_error=0;
@@ -463,6 +493,7 @@ int main(void)
          SerialDispCCDImage(80,60,gpHREF,upDateImage);        
         //OLED_DrawBMP(80,60,gpHREF);
         handle(up_gpHREF,PWM_Motor);
+        //show(upDateImage,gpHREF);
         if(a==5)
         {
         OLED_DrawBMP(0,0,OV7620_H,OV7620_W,upDateImage);

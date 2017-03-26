@@ -234,12 +234,13 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
              // printf("->left[%d]=%d \r\n",60-i,j); 
             if(get_gp(i,j,gpHREE)==false)
                    {
+                       set_gp(i,j,gpHREE,3);
                      left[60-i]=j;
                         break;
                    }
             }
          }
-         if(j==80){left[60-i]=79;j=0;close_f=1;}
+         if(j==80){left[60-i]=79;j=0;}
          
          if(get_gp(i,left[59-i],gpHREE)==false) 
             {
@@ -249,6 +250,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
                    //printf("<-left[%d]=%d \r\n",60-i,j);
                     if(get_gp(i,j,gpHREE))
                     {
+                        set_gp(i,j,gpHREE,2);
                         left[60-i]=j+1;
                         break;
                     }
@@ -263,24 +265,27 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
                   if(get_gp(i,j,gpHREE)==false)
                   {
                       right[60-i]=j;
+                      set_gp(i,j,gpHREE,2);
                       break;
                   }
               }
           }
-          if(j==-1){right[60-i]=0;j=0;close_f=2;}
+          if(j==-1){right[60-i]=0;j=0;}
           if(get_gp(i,right[59-i],gpHREE)==false)
           {
               for(j=right[59-i];j<80;j++)
               {
                  if(get_gp(i,j,gpHREE))
                  {
+                     set_gp(i,j,gpHREE,2);
                      right[60-i]=j-1;
                      break;
-                 }
-              
+                 }             
               }
               if(j==80){right[60-i]=j-1;j=0;}
+              
           }
+
               CoverLine();//²¹Ïß
          // printf("left[%d]=%d        right[%d]=%d\r\n",60-i,left[60-i],60-i,right[60-i]);
         }
@@ -301,23 +306,37 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
                 Dmunber=i-1;
                 l=1;
             }
-            if(left[i]==right[i]&&l==0)
-     {
-         l=1;
-         close=i;
-         Dmunber=i;
-         //if(img[i]==0)
-         //{
-         //    close_f=1;
-         //}
-         //if(img[i]==79)
-         //{
-         //    close_f=2;
-         //}
-     }
+                    if(left[i]==right[i]&&l==0)
+             {
+                 l=1;
+                 close=i;
+                 Dmunber=i;
+                 //if(img[i]==0)
+                 //{
+                 //    close_f=1;
+                 //}
+                 //if(img[i]==79)
+                 //{
+                 //    close_f=2;
+                 //}
+             }
+        }
+        for(i=close,close_f=0;i>close-10;i--)
+        {
+            if(left[i]==0&&right[i]!=79)
+            {
+                close_f=1;
+                break;
+            }
+            if(right[i]==79&&left[i]!=0)
+            {
+                close_f=2;
+                break;
+            }
+        }
   /*****************************************************************************************************************************/    
      //printf("left[%d]=%d        right[%d]=%d         img[%d]=%f\r\n",i,left[i],i,right[i],i,img[i]);
-        }
+        
         //printf("\r\n\r\n");
         //int c,d=4;
         //if(close>60) c=20;
@@ -347,17 +366,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
     average=findP(close);
 subtense=findD(5,16,img);
                    
-    if(close_f==1)
-{
-    //subtense=findR(left,close,close_f);
-           // subtense=findD(3,6,img);
-}
-else if(close_f==2)
-{
-    //subtense=findR(right,close,close_f);
-          //  subtense=findD(3,6,img);
-}
-//else subtense=0;
+   
    //printf("average=%f             subtense=%f\r\n",average,subtense);
 
 
@@ -371,6 +380,19 @@ else if(close_f==2)
     
     if(p==10)
     {
+         if(close_f==1)
+{
+    OLED_ShowStr(83,1,"left ");
+    //subtense=findR(left,close,close_f);
+           // subtense=findD(3,6,img);
+}
+else if(close_f==2)
+{
+     OLED_ShowStr(83,1,"right");
+    //subtense=findR(right,close,close_f);
+          //  subtense=findD(3,6,img);
+}
+else OLED_ShowStr(83,1,"     ");//subtense=0;
     int2char(83,3,k);
     //int2char(83,5,subtense);
     p=0;
