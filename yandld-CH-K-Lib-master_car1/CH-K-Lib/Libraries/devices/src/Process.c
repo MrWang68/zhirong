@@ -68,20 +68,7 @@ double findP(int i)
    // printf("\r\n");
     return b;
 }
-    //数字转字符串
-void int2char(int x,int y,int a)
-{
-    char b[6];
-    int c[20],d,e;
-    if(a>=0)
-    *b=' ';
-    else {*b='-';a=-a;}
-    *(b+1)=a/1000%10+48;
-    *(b+2)=a/100%10+48;
-    *(b+3)=a/10%10+48;
-    *(b+4)=a%10+48;
-    OLED_ShowStr(x,y,b);
-}
+
 /*
 **findD(18,20,left)
 **求斜率（最小二乘法）
@@ -127,7 +114,7 @@ double findR(int* a,int i,int v)
    //     d=a[4]+0.1;
    // else d=a[4]-0.1;
     double e[6]={0};
-    int f=0,g=0,c;
+    int f=0,c;
     if(v==1)
     {
         d=0.25;
@@ -193,7 +180,7 @@ void CoverLine(){
 int p;
 int m,k,k0=STRAIGHT,e=0;
 
-int handle(unsigned char **gpHREE,int PWM_Motor)
+int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,double f)
 {  
     /*
     if((gpHREE[5][3]!=0&&gpHREE[5][8]!=0&&gpHREE[4][3]!=0&&gpHREE[4][8]!=0)||e==1)
@@ -203,10 +190,9 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
         return 0;
     }
     */
-    char *str;
-    double D=2,q=0.25,w=0,e=1,f=0;
+
     int i,j;
-    int close=45,close_f=0,Dmunber=1;//取值范围
+    int close=45,close_f=0;//取值范围
     int l;//封闭标准
     /*******************************************************************************************************/
     int left[61]={40,40},right[61]={40,40};
@@ -290,7 +276,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
          // printf("left[%d]=%d        right[%d]=%d\r\n",60-i,left[60-i],60-i,right[60-i]);
         }
     /***********************************************************************************************************************/
-        int aaa=0,bbb=0;
+        int aaa=0,bbb=0,Dmunber=0;
        for(i=1,l=0;i<=45&&l==0;i++)
         {
             if(bbb==0&&left[i]>right[i])
@@ -382,18 +368,18 @@ subtense=findD(5,16,img);
     {
          if(close_f==1)
 {
-    OLED_ShowStr(83,1,"left ");
+    OLED_ShowStr(83,12,"left ");
     //subtense=findR(left,close,close_f);
            // subtense=findD(3,6,img);
 }
 else if(close_f==2)
 {
-     OLED_ShowStr(83,1,"right");
+     OLED_ShowStr(83,12,"right");
     //subtense=findR(right,close,close_f);
           //  subtense=findD(3,6,img);
 }
-else OLED_ShowStr(83,1,"     ");//subtense=0;
-    int2char(83,3,k);
+else OLED_ShowStr(83,6,"     ");//subtense=0;
+    OLED_showint2char(83,7,k);
     //int2char(83,5,subtense);
     p=0;
     }

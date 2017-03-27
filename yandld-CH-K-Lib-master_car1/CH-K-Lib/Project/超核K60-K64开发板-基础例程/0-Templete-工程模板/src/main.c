@@ -64,6 +64,10 @@ typedef enum
 }OV7620_Status;
   uint8_t status = TRANSFER_IN_PROCESS;
 
+int PWM_Motor=7100;
+double steer_q=0.25,steer_w=0,motor_e=1,motor_f=0;
+float P=0.4,I=0,D=0;
+
 void SerialDispCCDImage(int xSize, int ySize, uint8_t** ppData,uint8_t* upDateImage)
 {
     int x,y;
@@ -122,8 +126,7 @@ void show(uint8_t* upDateImage,uint8_t** ppData){
     }
     #endif
 }
-int PWM_Motor=7700;
-float P=0.4,I=0,D=0;
+
 
 float g_fDirectionControlOut2=0,g_fDirectionControlOutOld=0,g_fDirectionControlOutNew=0,V_error=0;
 typedef struct PID 
@@ -191,8 +194,42 @@ int SCCB_Init(uint32_t I2C_MAP)
     return 0;
 }
 
-//??????????PTA??
+//??????????PTA??steer_q=0.25,steer_w=0,motor_e=1,motor_f=0;
 int y=0;
+int z=0;
+void par_ISR(uint32_t index)
+{
+            DelayMs(500);
+    if(index &(1 <<22))
+    {
+        if(z<3)
+        {
+            z++;
+        }
+        else z=0;
+    }
+    else if(index & (1 <<21))
+    {
+       switch(z)
+        {
+            case 0:     steer_q+=0.02;break;
+            case 1:     steer_w+=0.02;break;
+            case 2:     motor_e+=0.02;break;
+            case 3:     motor_f+=0.02;break;
+        }
+    }
+    else if(index & (1 <<20))
+    {
+       // GPIO_ToggleBit(HW_GPIOC, 6);
+        switch(z)
+        {
+            case 0:     steer_q-=0.02;break;
+            case 1:     steer_w-=0.02;break;
+            case 2:     motor_e-=0.02;break;
+            case 3:     motor_f-=0.02;break;
+        }
+    }
+}
 void OV_ISR(uint32_t index)
 {
     
@@ -472,8 +509,19 @@ int main(void)
     GPIO_WriteBit(HW_GPIOB, 17, 0);//DIR4
     FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,PWM_Motor); // 0 - 10000  to 0% - 100% 右轮
     FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,PWM_Motor); // 0 - 10000  to 0% - 100%   左轮
+    //参数调整
 
-    int a=0,b=0;
+    GPIO_QuickInit(HW_GPIOB, 22, kGPIO_Mode_IFT);//PQS1
+    GPIO_QuickInit(HW_GPIOB, 21, kGPIO_Mode_IFT);//PQS2
+    GPIO_QuickInit(HW_GPIOB, 20, kGPIO_Mode_IFT);//PQS3
+
+    GPIO_CallbackInstall(HW_GPIOB, par_ISR);
+    
+    GPIO_ITDMAConfig(HW_GPIOB, 22, kGPIO_IT_RisingEdge, true);
+    GPIO_ITDMAConfig(HW_GPIOB, 21, kGPIO_IT_RisingEdge, true);
+    GPIO_ITDMAConfig(HW_GPIOB, 20, kGPIO_IT_RisingEdge, true);
+    /*******************************************************************/
+    int a=0;
     GPIO_WriteBit(HW_GPIOA, 17, 1);
     while(1)
     {
@@ -492,11 +540,17 @@ int main(void)
          camera_get_image();
          SerialDispCCDImage(80,60,gpHREF,upDateImage);        
         //OLED_DrawBMP(80,60,gpHREF);
-        handle(up_gpHREF,PWM_Motor);
+        
+        handle(up_gpHREF,PWM_Motor,steer_q,steer_w,motor_e,motor_f);
         //show(upDateImage,gpHREF);
         if(a==5)
         {
         OLED_DrawBMP(0,0,OV7620_H,OV7620_W,upDateImage);
+        OLED_showint2char(83,0,z);     
+        OLED_showint2char(83,1,(int)(steer_q*100));   
+        OLED_showint2char(83,2,(int)(steer_w*100));   
+        OLED_showint2char(83,3,(int)(motor_e*100));   
+        OLED_showint2char(83,4,(int)(motor_f*100));               
         a=0;
         }
         else
