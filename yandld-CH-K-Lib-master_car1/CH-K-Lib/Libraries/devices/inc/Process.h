@@ -9,5 +9,5 @@
 
 
 
-int handle(unsigned char **gpHREF,int PWM_Motor);
+int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,double f);
 

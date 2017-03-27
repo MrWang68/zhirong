@@ -71,20 +71,7 @@ double findP(int i)
    // printf("\r\n");
     return b;
 }
-    //数字转字符串
-void int2char(int x,int y,int a)
-{
-    char b[6];
-    int c[20],d,e;
-    if(a>=0)
-    *b=' ';
-    else {*b='-';a=-a;}
-    *(b+1)=a/1000%10+48;
-    *(b+2)=a/100%10+48;
-    *(b+3)=a/10%10+48;
-    *(b+4)=a%10+48;
-    OLED_ShowStr(x,y,b);
-}
+
 //绝对值
 int myabs(int a){
     if(a >= 0)
@@ -110,6 +97,7 @@ int findm(int a,int b,int flag){
         return a;
     }
 }
+
 
 
 /*
@@ -215,7 +203,7 @@ double findR(int* a,int i,int v)
    //     d=a[4]+0.1;
    // else d=a[4]-0.1;
     double e[6]={0};
-    int f=0,g=0,c;
+    int f=0,c;
     if(v==1)
     {
         d=0.25;
@@ -282,7 +270,7 @@ int p;
 int m,k,k0=STRAIGHT,e=0;
 double ka,kdd;
 
-int handle(unsigned char **gpHREE,int PWM_Motor)
+int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,double f)
 {  
     /*
     if((gpHREE[5][3]!=0&&gpHREE[5][8]!=0&&gpHREE[4][3]!=0&&gpHREE[4][8]!=0)||e==1)
@@ -292,10 +280,9 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
         return 0;
     }
     */
-    char *str;
-    double D=2,q=0.25,w=0,e=1,f=0;
+
     int i,j;
-    int close=45,close_f=0,Dmunber=1;//取值范围
+    int close=45,close_f=0;//取值范围
     int l;//封闭标准
     /*******************************************************************************************************/
     int left[61]={40,40},right[61]={40,40};
@@ -323,12 +310,13 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
              // printf("->left[%d]=%d \r\n",60-i,j); 
             if(get_gp(i,j,gpHREE)==false)
                    {
+                       set_gp(i,j,gpHREE,3);
                      left[60-i]=j;
                         break;
                    }
             }
          }
-         if(j==80){left[60-i]=79;j=0;close_f=1;}
+         if(j==80){left[60-i]=79;j=0;}
          
          if(get_gp(i,left[59-i],gpHREE)==false) 
             {
@@ -338,6 +326,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
                    //printf("<-left[%d]=%d \r\n",60-i,j);
                     if(get_gp(i,j,gpHREE))
                     {
+                        set_gp(i,j,gpHREE,2);
                         left[60-i]=j+1;
                         break;
                     }
@@ -352,29 +341,32 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
                   if(get_gp(i,j,gpHREE)==false)
                   {
                       right[60-i]=j;
+                      set_gp(i,j,gpHREE,2);
                       break;
                   }
               }
           }
-          if(j==-1){right[60-i]=0;j=0;close_f=2;}
+          if(j==-1){right[60-i]=0;j=0;}
           if(get_gp(i,right[59-i],gpHREE)==false)
           {
               for(j=right[59-i];j<80;j++)
               {
                  if(get_gp(i,j,gpHREE))
                  {
+                     set_gp(i,j,gpHREE,2);
                      right[60-i]=j-1;
                      break;
-                 }
-              
+                 }             
               }
               if(j==80){right[60-i]=j-1;j=0;}
+              
           }
+
               CoverLine();//补线
          // printf("left[%d]=%d        right[%d]=%d\r\n",60-i,left[60-i],60-i,right[60-i]);
         }
     /***********************************************************************************************************************/
-        int aaa=0,bbb=0;
+        int aaa=0,bbb=0,Dmunber=0;
        for(i=1,l=0;i<=45&&l==0;i++)
         {
             if(bbb==0&&left[i]>right[i])
@@ -390,23 +382,37 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
                 Dmunber=i-1;
                 l=1;
             }
-            if(left[i]==right[i]&&l==0)
-     {
-         l=1;
-         close=i;
-         Dmunber=i;
-         //if(img[i]==0)
-         //{
-         //    close_f=1;
-         //}
-         //if(img[i]==79)
-         //{
-         //    close_f=2;
-         //}
-     }
+                    if(left[i]==right[i]&&l==0)
+             {
+                 l=1;
+                 close=i;
+                 Dmunber=i;
+                 //if(img[i]==0)
+                 //{
+                 //    close_f=1;
+                 //}
+                 //if(img[i]==79)
+                 //{
+                 //    close_f=2;
+                 //}
+             }
+        }
+        for(i=close,close_f=0;i>close-10;i--)
+        {
+            if(left[i]==0&&right[i]!=79)
+            {
+                close_f=1;
+                break;
+            }
+            if(right[i]==79&&left[i]!=0)
+            {
+                close_f=2;
+                break;
+            }
+        }
   /*****************************************************************************************************************************/    
      //printf("left[%d]=%d        right[%d]=%d         img[%d]=%f\r\n",i,left[i],i,right[i],i,img[i]);
-        }
+        
         //printf("\r\n\r\n");
         //int c,d=4;
         //if(close>60) c=20;
@@ -434,26 +440,9 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
 {
                     // printf("close=%d\r\n",close);
     average=findP(close);
+
 //subtense=findD(3,10,img);
                    xl = findDD(5,25);
-    if(close_f==1)
-{
-//OLED_ShowStr(83, 1, "right");
-    //subtense=findR(left,close,close_f);
-           // subtense=findD(3,6,img);
-}
-else if(close_f==2)
-{
-    //OLED_ShowStr(83, 1, "left ");
-    //subtense=findR(right,close,close_f);
-          //  subtense=findD(3,6,img);
-}
-//else subtense=0;
-   //printf("average=%f             subtense=%f\r\n",average,subtense);
-
-//if(xl>80||xl<-80)
-  //  xl = 0;
-
     if(average>0){
         q= 0.25*0.7;
         w= 0.3;
@@ -474,36 +463,32 @@ else if(close_f==2)
     //turnStr();
     //printf("k=%d\r\n",k);
     
-    /*
-    float bl=0.48;
-    if(xl >= 0 && xl <40)
-        kdd = bl*(0.25*xl)*(0.25*xl);
-    else if(xl < 50 && xl >= 40)
-        kdd = bl*(0.6*xl-14)*(0.6*xl-14);
-    else if(xl >= 50)
-        kdd = bl*(0.375*xl-2.75)*(0.375*xl-2.75);
-    else if(xl < 0 && xl >= -40)
-        kdd = -bl*(0.25*xl)*(0.25*xl);
-    else if(xl < -40 && xl >= -50)
-        kdd = -bl*(0.6*xl+14)*(0.6*xl+14);
-    else if(xl <= -50)
-        kdd = -bl*(0.375*xl+2.75)*(0.375*xl+2.75);
-    */
-    
-  /*  
-    if(xl >= -24 && xl <24)
-        kdd = xl*0.9;
-    else //if(xl < 50 && xl >= 40)
-        kdd = xl*1.8;
-    */
+
     
     if(p==10)
     {
-    int2char(83,1,k);
-    int2char(83,2,ka);
-    int2char(83,3,average);
-    int2char(83,4,kdd);
-    int2char(83,5,xl);
+/*
+    OLED_showint2char(83,1,k);
+    OLED_showint2char(83,2,ka);
+    OLED_showint2char(83,3,average);
+    OLED_showint2char(83,4,kdd);
+    OLED_showint2char(83,5,xl);
+*/
+         if(close_f==1)
+{
+    OLED_ShowStr(83,12,"left ");
+    //subtense=findR(left,close,close_f);
+           // subtense=findD(3,6,img);
+}
+else if(close_f==2)
+{
+     OLED_ShowStr(83,12,"right");
+    //subtense=findR(right,close,close_f);
+          //  subtense=findD(3,6,img);
+}
+else OLED_ShowStr(83,6,"     ");//subtense=0;
+    OLED_showint2char(83,7,k);
+    //int2char(83,5,subtense);
     p=0;
     }
     else{

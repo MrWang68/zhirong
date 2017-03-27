@@ -394,5 +394,17 @@ void OLED_ShowCN(unsigned char x, unsigned char y, unsigned char N)
 	}
    */
 }
-
+    //Êý×Ö×ª×Ö·û´®
+void OLED_showint2char(int x,int y,int a)
+{
+    char b[6]={0};
+    if(a>=0)
+    *b=' ';
+    else {*b='-';a=-a;}
+    *(b+1)=a/1000%10+48;
+    *(b+2)=a/100%10+48;
+    *(b+3)=a/10%10+48;
+    *(b+4)=a%10+48;
+    OLED_ShowStr(x,y,b);
+}
 
