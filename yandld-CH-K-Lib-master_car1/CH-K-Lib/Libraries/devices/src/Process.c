@@ -11,6 +11,9 @@
 
 double  img[60+1];
 double  average,carI,subtense;
+double xl;
+int xielvnum = -1;
+int xielvnum2 = -1;
 
 
 bool get_gp(int i,int j,unsigned char **gpHREE){
@@ -82,6 +85,33 @@ void int2char(int x,int y,int a)
     *(b+4)=a%10+48;
     OLED_ShowStr(x,y,b);
 }
+//绝对值
+int myabs(int a){
+    if(a >= 0)
+        return a;
+    else if(a < 0)
+        return -a;
+}
+//比较大小
+int findm(int a,int b,int flag){
+    int rt;
+    if(flag == 0) //max
+    {
+    if(a >= b)
+        return a;
+    else
+        return b;
+    }
+    else if(flag == 1) //min
+    {
+    if(a >= b)
+        return b;
+    else
+        return a;
+    }
+}
+
+
 /*
 **findD(18,20,left)
 **求斜率（最小二乘法）
@@ -91,7 +121,7 @@ double findD(uint8_t begin,uint8_t end,double *p)
    int xsum=0,ysum=0,xysum=0,x2sum=0;
    uint8_t i=0;
    float result=0;
-   static float resultlast;
+   static float resultlast,resultsum;
    p=p+begin;
    for(i=begin;i<end;i++)
    {
@@ -110,11 +140,69 @@ double findD(uint8_t begin,uint8_t end,double *p)
   {
    result=resultlast;
   }
-  result =(float) 1/result;
+    
+  if(xielvnum < 0)
+      resultlast = result;
+  
+  else if(xielvnum >= 0 && xielvnum < 20){
+      resultsum += result;
+   }
+  else {
+     // if((myabs(resultsum/5-resultlast)) > 1)
+            resultlast = resultsum/20;
+      resultsum = 0;
+      xielvnum = -1;
+  }
+      xielvnum++;
+  result = resultlast;
+  
   result *= 100;
-  return result/10;
+  return result;
 
 }
+
+//??????
+double findDD(int m, int n){
+    double xielv = 0;
+    static double xielvlast,xielvsum;
+	
+    int a[5],b[5],k[4] = {1,4,2,1};
+    double xielvs,xl[5];
+	a[0] = 0;
+	b[0] = m-1;
+	xl[0] = 0;
+	for(int i=1;i<5;i++){
+		a[i] = b[i-1]+1;
+		b[i] = a[i]+(n-m)*k[i-1]/8;
+		if(b[i] - a[i] == 0)
+			xl[i] = 0;
+		else
+			xl[i] =(double)(img[b[i]] - img[a[i]])/(b[i] - a[i]);
+		xielvs += xl[i];
+	}
+	xielv = xielvs/8;
+	
+    
+     //   xielv =(double)(img[n] - img[m])/(n - m);
+  if(xielvnum2 < 0)
+      xielvlast = xielv;
+  
+  else if(xielvnum2 >= 0 && xielvnum2 < 15){
+      xielvsum += xielv;
+   }
+  else {
+    //  if((myabs(xielvsum/5-xielvlast)) > 1)
+         xielvlast = xielvsum/15;
+      xielvsum = 0;
+      xielvnum2 = -1;
+  }
+      xielvnum2++;
+    xielv = xielvlast;
+  
+    return xielv*100;
+}
+
+
 double findR(int* a,int i,int v)
 {
     //if(i>40)i=40;
@@ -192,6 +280,7 @@ void CoverLine(){
 
 int p;
 int m,k,k0=STRAIGHT,e=0;
+double ka,kdd;
 
 int handle(unsigned char **gpHREE,int PWM_Motor)
 {  
@@ -345,40 +434,84 @@ int handle(unsigned char **gpHREE,int PWM_Motor)
 {
                     // printf("close=%d\r\n",close);
     average=findP(close);
-subtense=findD(5,16,img);
-                   
+//subtense=findD(3,10,img);
+                   xl = findDD(5,25);
     if(close_f==1)
 {
+//OLED_ShowStr(83, 1, "right");
     //subtense=findR(left,close,close_f);
            // subtense=findD(3,6,img);
 }
 else if(close_f==2)
 {
+    //OLED_ShowStr(83, 1, "left ");
     //subtense=findR(right,close,close_f);
           //  subtense=findD(3,6,img);
 }
 //else subtense=0;
    //printf("average=%f             subtense=%f\r\n",average,subtense);
 
+//if(xl>80||xl<-80)
+  //  xl = 0;
 
-    if(average>0)
-    k=q*average*average+w*subtense;
-    else 
-    k=-q*average*average+w*subtense;
+    if(average>0){
+        q= 0.25*0.7;
+        w= 0.3;
+    k=q*average*average+w*xl;
+        ka = q*average*average;
+        kdd = w*xl;
+    }
+    
+    else {
+        q= 0.25*0.7;
+        w= 0.35;
+    k=-q*average*average+w*xl;
+        ka = -q*average*average;
+        kdd = w*xl;
+    }
+    
     m=e*average*average+f*subtense;
     //turnStr();
     //printf("k=%d\r\n",k);
     
+    /*
+    float bl=0.48;
+    if(xl >= 0 && xl <40)
+        kdd = bl*(0.25*xl)*(0.25*xl);
+    else if(xl < 50 && xl >= 40)
+        kdd = bl*(0.6*xl-14)*(0.6*xl-14);
+    else if(xl >= 50)
+        kdd = bl*(0.375*xl-2.75)*(0.375*xl-2.75);
+    else if(xl < 0 && xl >= -40)
+        kdd = -bl*(0.25*xl)*(0.25*xl);
+    else if(xl < -40 && xl >= -50)
+        kdd = -bl*(0.6*xl+14)*(0.6*xl+14);
+    else if(xl <= -50)
+        kdd = -bl*(0.375*xl+2.75)*(0.375*xl+2.75);
+    */
+    
+  /*  
+    if(xl >= -24 && xl <24)
+        kdd = xl*0.9;
+    else //if(xl < 50 && xl >= 40)
+        kdd = xl*1.8;
+    */
+    
     if(p==10)
     {
-    int2char(83,3,k);
-    //int2char(83,5,subtense);
+    int2char(83,1,k);
+    int2char(83,2,ka);
+    int2char(83,3,average);
+    int2char(83,4,kdd);
+    int2char(83,5,xl);
     p=0;
     }
     else{
         p++;
     }
     
+    //k = 1.5*xl;
+    //k=1.8*xl;
     /*
     if(k>0&&k0>0)
     {

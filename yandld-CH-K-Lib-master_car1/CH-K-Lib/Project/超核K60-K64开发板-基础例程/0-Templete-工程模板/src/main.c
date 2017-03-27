@@ -92,7 +92,7 @@ void SerialDispCCDImage(int xSize, int ySize, uint8_t** ppData,uint8_t* upDateIm
     }
     */
 }
-int PWM_Motor=7100;
+int PWM_Motor=6800;
 float P=0.4,I=0,D=0;
 
 float g_fDirectionControlOut2=0,g_fDirectionControlOutOld=0,g_fDirectionControlOutNew=0,V_error=0;
