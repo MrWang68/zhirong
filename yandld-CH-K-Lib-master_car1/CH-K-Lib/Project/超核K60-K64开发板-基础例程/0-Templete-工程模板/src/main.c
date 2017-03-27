@@ -75,14 +75,14 @@ void SerialDispCCDImage(int xSize, int ySize, uint8_t** ppData,uint8_t* upDateIm
     {
         for(x = 0; x < (xSize/8); x++)
         {
-            *(upDateImage+(x-1)*8+y*xSize+0)=(ppData[y][x]>>6) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+1)=(ppData[y][x]>>5) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+2)=(ppData[y][x]>>4) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+3)=(ppData[y][x]>>3) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+4)=(ppData[y][x]>>2) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+5)=(ppData[y][x]>>1) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+6)=(ppData[y][x]>>0) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+7)=(ppData[y][x+1]>>7) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+0)=(ppData[y][x]>>7) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+1)=(ppData[y][x]>>6) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+2)=(ppData[y][x]>>5) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+3)=(ppData[y][x]>>4) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+4)=(ppData[y][x]>>3) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+5)=(ppData[y][x]>>2) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+6)=(ppData[y][x]>>2) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+7)=(ppData[y][x]>>0) & 0x01;
         }
     }
     
@@ -94,7 +94,6 @@ void show(uint8_t* upDateImage,uint8_t** ppData){
     #if 1
         for(y = 0; y < 60; y++)
     {
-        printf("%4d",60-y);
         for(x = 0; x < 80; x++)
         {
             printf("%d",*(upDateImage+x+y*80));
@@ -533,24 +532,22 @@ int main(void)
         }
         else
         {
-            
         b++;
-        } 
+        }
         # endif
          camera_get_image();
-         SerialDispCCDImage(80,60,gpHREF,upDateImage);        
+         SerialDispCCDImage(80,60,gpHREF,upDateImage);
         //OLED_DrawBMP(80,60,gpHREF);
-        
         handle(up_gpHREF,PWM_Motor,steer_q,steer_w,motor_e,motor_f);
         //show(upDateImage,gpHREF);
         if(a==5)
         {
         OLED_DrawBMP(0,0,OV7620_H,OV7620_W,upDateImage);
-        OLED_showint2char(83,0,z);     
-        OLED_showint2char(83,1,(int)(steer_q*100));   
-        OLED_showint2char(83,2,(int)(steer_w*100));   
-        OLED_showint2char(83,3,(int)(motor_e*100));   
-        OLED_showint2char(83,4,(int)(motor_f*100));               
+        OLED_showint2char(83,0,z);
+        OLED_showint2char(83,1,(int)(steer_q*100));
+        OLED_showint2char(83,2,(int)(steer_w*100));
+        OLED_showint2char(83,3,(int)(motor_e*100));
+        OLED_showint2char(83,4,(int)(motor_f*100));       
         a=0;
         }
         else

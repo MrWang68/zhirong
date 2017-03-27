@@ -310,7 +310,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
              // printf("->left[%d]=%d \r\n",60-i,j); 
             if(get_gp(i,j,gpHREE)==false)
                    {
-                       set_gp(i,j,gpHREE,3);
+                       //set_gp(i,j,gpHREE,3);
                      left[60-i]=j;
                         break;
                    }
@@ -326,7 +326,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
                    //printf("<-left[%d]=%d \r\n",60-i,j);
                     if(get_gp(i,j,gpHREE))
                     {
-                        set_gp(i,j,gpHREE,2);
+                        //set_gp(i,j,gpHREE,3);
                         left[60-i]=j+1;
                         break;
                     }
@@ -341,7 +341,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
                   if(get_gp(i,j,gpHREE)==false)
                   {
                       right[60-i]=j;
-                      set_gp(i,j,gpHREE,2);
+                      //set_gp(i,j,gpHREE,2);
                       break;
                   }
               }
@@ -353,7 +353,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
               {
                  if(get_gp(i,j,gpHREE))
                  {
-                     set_gp(i,j,gpHREE,2);
+                     //set_gp(i,j,gpHREE,2);
                      right[60-i]=j-1;
                      break;
                  }             
