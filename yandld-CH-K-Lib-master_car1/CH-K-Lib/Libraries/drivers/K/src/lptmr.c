@@ -245,7 +245,7 @@ uint32_t LPTMR_PC_QuickInit(uint32_t MAP)
     /* init pinmux */
     for(i = 0; i < pq->pin_cnt; i++)
     {
-        PORT_PinMuxConfig(pq->io, pq->pin_start + i, (PORT_PinMux_Type) pq->mux); 
+        PORT_PinMuxConfig(pq->io, pq->pin_start + i, (PORT_PinMux_Type) pq->mux);
     }
     /* init moudle */
     LPTMR_PC_Init(&LPTMR_PC_InitStruct1);

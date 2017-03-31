@@ -82,17 +82,17 @@
         <Book>
           <Number>0</Number>
           <Title>Quick Start Guide (TWR-K60D100M)</Title>
-          <Path>G:\software\keil\ARM\PACK\Keil\Kinetis_K60_DFP\1.4.0\Documents\TWR-K60D100MQSG.pdf</Path>
+          <Path>Y:\keil\ARM\PACK\Keil\Kinetis_K60_DFP\1.4.0\Documents\TWR-K60D100MQSG.pdf</Path>
         </Book>
         <Book>
           <Number>1</Number>
           <Title>Schematic (TWR-K60D100M)</Title>
-          <Path>G:\software\keil\ARM\PACK\Keil\Kinetis_K60_DFP\1.4.0\Documents\TWR-K60D100M_SCH.pdf</Path>
+          <Path>Y:\keil\ARM\PACK\Keil\Kinetis_K60_DFP\1.4.0\Documents\TWR-K60D100M_SCH.pdf</Path>
         </Book>
         <Book>
           <Number>2</Number>
           <Title>User Manual (TWR-K60D100M)</Title>
-          <Path>G:\software\keil\ARM\PACK\Keil\Kinetis_K60_DFP\1.4.0\Documents\TWRK60D100MUM.pdf</Path>
+          <Path>Y:\keil\ARM\PACK\Keil\Kinetis_K60_DFP\1.4.0\Documents\TWRK60D100MUM.pdf</Path>
         </Book>
         <Book>
           <Number>3</Number>

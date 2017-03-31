@@ -66,7 +66,7 @@ typedef enum
 
 int PWM_Motor=7100;
 double steer_q=0.25,steer_w=0,motor_e=1,motor_f=0;
-float P=0.4,I=0,D=0;
+
 
 void SerialDispCCDImage(int xSize, int ySize, uint8_t** ppData,uint8_t* upDateImage)
 {
@@ -143,32 +143,43 @@ void PID_Init(void)
     sptr->V_lasterror = 0; //Error[-1] 
     sptr->V_preserror = 0; //Error[-2]   
 }
-
-void PID_caculate(uint16_t Set_Value,float Get_Value) 
+float P=0.1,I=0,D=0;
+void PID_caculate(uint16_t Set_Value,float Get_Value,int c) 
 { 
     float g_fDirectionControlOut1=0;
     V_error=Set_Value-Get_Value;
     g_fDirectionControlOut1=P*(V_error-sptr->V_lasterror)+I*V_error+D*(V_error-2*sptr->V_lasterror+sptr->V_preserror);
     sptr->V_preserror =sptr->V_lasterror;       
     sptr->V_lasterror = V_error;  
-    if(g_fDirectionControlOut1>200)g_fDirectionControlOut2  +=200;
-    else if(g_fDirectionControlOut1<-200)g_fDirectionControlOut2  +=-200;
-    else g_fDirectionControlOut2  +=  g_fDirectionControlOut1;
+   // if(g_fDirectionControlOut1>200)g_fDirectionControlOut2  +=200;
+    //else if(g_fDirectionControlOut1<-200)g_fDirectionControlOut2  +=-200;
+   // else
+    g_fDirectionControlOut2  +=  g_fDirectionControlOut1;
     g_fDirectionControlOutOld = g_fDirectionControlOutNew;
     g_fDirectionControlOutNew =g_fDirectionControlOut2;
-    if(g_fDirectionControlOutNew<6000)g_fDirectionControlOutNew=6000;
-    else if(g_fDirectionControlOutNew>8000)g_fDirectionControlOutNew=8000;
+    //if(g_fDirectionControlOutNew<6000)g_fDirectionControlOutNew=6000;
+    //else if(g_fDirectionControlOutNew>8000)g_fDirectionControlOutNew=8000;
    // printf(" 2=%f  new=%f  out1=%f     V_error=%f  \r\n",g_fDirectionControlOut2,g_fDirectionControlOutNew,g_fDirectionControlOut1,V_error);
     //FTM_PWM_ChangeDuty(HW_FTM2, HW_FTM_CH0,g_fDirectionControlOutNew); 
-}
+    if(c==1) 
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,g_fDirectionControlOutNew); // 0 - 10000  to 0% - 100%   左轮
+    if(c==2)
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,g_fDirectionControlOutNew); // 0 - 10000  to 0% - 100% 右轮
 
+}
+    uint32_t LeftSpeed;
+    int RightSpeed;//乘以0.06为当前速度
 static void PIT_ISR(void)
 {
-    uint32_t value;
-    value = LPTMR_PC_ReadCounter(); //获得LPTMR模块的计数值
+    uint8_t a;
+    FTM_QD_GetData(HW_FTM2, &RightSpeed, &a);
+    FTM_QD_ClearCount(HW_FTM2);
+    LeftSpeed = LPTMR_PC_ReadCounter(); //获得LPTMR模块的计数值
     LPTMR_ClearCounter();  //计数器归零
-    PID_caculate(35000,value);
-    //printf("LPTMR:%dHz\r\n", value);
+    PID_caculate(33,LeftSpeed,1);
+    //PID_caculate(50,RightSpeed,2);
+    //OLED_showint2char(83,1,value);
+       
 }
 
 int SCCB_Init(uint32_t I2C_MAP)
@@ -476,11 +487,14 @@ int main(void)
     /* 设置FTM 的占空比 */
     FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1, 5000); // 50%占空比 0-10000 对应 0-100%
     
-    /* 快速初始化 LPTMR模块用作脉冲计数功能 */
-    LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
-    
+    /*测速驱动*/
+    //LPTMR_PC_QuickInit(LPTMR_ALT2_PC05); /* 脉冲计数 */
+    LPTMR_PC_QuickInit(LPTMR_ALT1_PA19);
+    GPIO_QuickInit(HW_GPIOA,12, kGPIO_Mode_OPP);
+    GPIO_WriteBit(HW_GPIOA,12, 1);  
+    FTM_QD_QuickInit(FTM2_QD_PHA_PA10_PHB_PA11, kFTM_QD_NormalPolarity,kQD_CountDirectionEncoding);
     /* 开启一个PIT定时器 产生1S中断 在中断中读取LPTMR的计数值 */
-    PIT_QuickInit(HW_PIT_CH1, 1000 * 1000);
+    PIT_QuickInit(HW_PIT_CH1, 1000 * 10);
     PIT_CallbackInstall(HW_PIT_CH1, PIT_ISR);
     PIT_ITDMAConfig(HW_PIT_CH1, kPIT_IT_TOF, true);
    
@@ -540,14 +554,17 @@ int main(void)
         //OLED_DrawBMP(80,60,gpHREF);
         handle(up_gpHREF,PWM_Motor,steer_q,steer_w,motor_e,motor_f);
         //show(upDateImage,gpHREF);
-        if(a==5)
+        if(a==20)
         {
         OLED_DrawBMP(0,0,OV7620_H,OV7620_W,upDateImage);
-        OLED_showint2char(83,0,z);
-        OLED_showint2char(83,1,(int)(steer_q*100));
-        OLED_showint2char(83,2,(int)(steer_w*100));
-        OLED_showint2char(83,3,(int)(motor_e*100));
-        OLED_showint2char(83,4,(int)(motor_f*100));       
+        //printf("LPTMR:%dHz\r\n", value);
+        OLED_showint2char(83,0,(int)(LeftSpeed));
+        OLED_showint2char(83,1,(int)(RightSpeed));   
+        //OLED_showint2char(83,0,z);
+        //OLED_showint2char(83,1,(int)(steer_q*100));
+        //OLED_showint2char(83,2,(int)(steer_w*100));
+        //OLED_showint2char(83,3,(int)(motor_e*100));
+        //OLED_showint2char(83,4,(int)(motor_f*100));       
         a=0;
         }
         else

@@ -267,7 +267,7 @@ void CoverLine(){
 }
 
 int p;
-int m,k,k0=STRAIGHT,e=0;
+int m,k,k0=STRAIGHT;
 double ka,kdd;
 
 int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,double f)
@@ -457,6 +457,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
     k=-q*average*average+w*xl;
         ka = -q*average*average;
         kdd = w*xl;
+        //kdd = tan(w);
     }
     
     m=e*average*average+f*subtense;
@@ -476,13 +477,13 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
 */
          if(close_f==1)
 {
-    OLED_ShowStr(83,12,"left ");
+   // OLED_ShowStr(83,1,"left ");
     //subtense=findR(left,close,close_f);
            // subtense=findD(3,6,img);
 }
 else if(close_f==2)
 {
-     OLED_ShowStr(83,12,"right");
+    // OLED_ShowStr(83,1,"right");
     //subtense=findR(right,close,close_f);
           //  subtense=findD(3,6,img);
 }
