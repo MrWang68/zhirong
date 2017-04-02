@@ -14,7 +14,16 @@ double  average,carI,subtense;
 double xl;
 int xielvnum = -1;
 int xielvnum2 = -1;
+int xielvnum3 = -1;
+    
 
+int close=45,close_f=0;//取值范围
+int l;//封闭标准
+int left[61]={40,40},right[61]={40,40};
+
+int leftXmen;
+
+int rightXmen;
 
 bool get_gp(int i,int j,unsigned char **gpHREE){
     unsigned char c=gpHREE[i][j];
@@ -104,7 +113,7 @@ int findm(int a,int b,int flag){
 **findD(18,20,left)
 **求斜率（最小二乘法）
 */
-double findD(uint8_t begin,uint8_t end,double *p)  
+double findD(uint8_t begin,uint8_t end,int *p)  
 {
    int xsum=0,ysum=0,xysum=0,x2sum=0;
    uint8_t i=0;
@@ -132,25 +141,25 @@ double findD(uint8_t begin,uint8_t end,double *p)
   if(xielvnum < 0)
       resultlast = result;
   
-  else if(xielvnum >= 0 && xielvnum < 20){
+  else if(xielvnum >= 0 && xielvnum < 10){
       resultsum += result;
    }
   else {
      // if((myabs(resultsum/5-resultlast)) > 1)
-            resultlast = resultsum/20;
+            resultlast = resultsum/10;
       resultsum = 0;
       xielvnum = -1;
   }
       xielvnum++;
   result = resultlast;
-  
-  result *= 100;
   return result;
 
 }
 
+
+
 //??????
-double findDD(int m, int n){
+double findDD(int m, int n,double *p){
     double xielv = 0;
     static double xielvlast,xielvsum;
 	
@@ -165,7 +174,7 @@ double findDD(int m, int n){
 		if(b[i] - a[i] == 0)
 			xl[i] = 0;
 		else
-			xl[i] =(double)(img[b[i]] - img[a[i]])/(b[i] - a[i]);
+			xl[i] =(double)(p[b[i]] - p[a[i]])/(b[i] - a[i]);
 		xielvs += xl[i];
 	}
 	xielv = xielvs/8;
@@ -175,12 +184,12 @@ double findDD(int m, int n){
   if(xielvnum2 < 0)
       xielvlast = xielv;
   
-  else if(xielvnum2 >= 0 && xielvnum2 < 15){
+  else if(xielvnum2 >= 0 && xielvnum2 < 10){
       xielvsum += xielv;
    }
   else {
     //  if((myabs(xielvsum/5-xielvlast)) > 1)
-         xielvlast = xielvsum/15;
+         xielvlast = xielvsum/10;
       xielvsum = 0;
       xielvnum2 = -1;
   }
@@ -189,6 +198,37 @@ double findDD(int m, int n){
   
     return xielv*100;
 }
+
+
+/*
+double findDDD(int m, int n,int my,int ny)
+    {
+    double xielv2 = 0;
+    static double xielv2last,xielv2sum;
+		if(n - m == 0)
+			xielv2 = 0;
+		else
+			xielv2 =(double)(ny - my)/(n - m);
+        
+  if(xielvnum3 < 0)
+      xielv2last = xielv2;
+  
+  else if(xielvnum3 >= 0 && xielvnum3 < 10){
+      xielv2sum += xielv2;
+   }
+  else {
+    //  if((myabs(xielvsum/5-xielvlast)) > 1)
+      xielv2last = xielv2sum/10;
+      xielv2sum = 0;
+      xielvnum3 = -1;
+  }
+      xielvnum3++;
+    xielv2 = xielv2last;
+  
+    return xielv2;
+}
+*/
+
 
 
 double findR(int* a,int i,int v)
@@ -262,9 +302,391 @@ void handle(unsigned char **gpHREE)
     }
 }
 */
-void CoverLine(){
-    
+void CoverLine(int startLine,int endLine,int x,int lr,unsigned char **gpHREE)
+    {
+        int i,j;
+        double slope=0;
+    if(lr==1)//left
+    {
+        //slope=fineDDD(startLine,endLine,left[startLine],x);
+        slope=(x -left[startLine])/(double)(endLine -startLine);
+        
+        for(i=startLine+1;i<endLine;i++)
+        {
+      left[i]=(int)(left[startLine]+(i-startLine)*slope);
+        gpHREE[60-i][left[i]]=2;
+        }
+            left[endLine]=x;
+         for(i=59-endLine;i>=0;i--)
+       {
+
+         if(get_gp(i,left[59-i],gpHREE)==true)
+         {
+            for(j=left[59-i];j<80;j++)
+            {
+             // printf("->left[%d]=%d \r\n",60-i,j); 
+            if(get_gp(i,j,gpHREE)==false)
+                   {
+                       //set_gp(i,j,gpHREE,3);
+                     left[60-i]=j-1;
+                        break;
+                   }
+            }
+         if(j==80){left[60-i]=79;j=0;}
+           
+         }
+         
+         
+         if(get_gp(i,left[59-i],gpHREE)==false) 
+            {
+              
+                for(j=left[59-i];j>=0;j--)
+               {
+                   //printf("<-left[%d]=%d \r\n",60-i,j);
+                    if(get_gp(i,j,gpHREE))
+                    {
+                        //set_gp(i,j,gpHREE,3);
+                        left[60-i]=j;
+                        break;
+                    }
+                }
+               if(j==-1){left[60-i]=0;j=0;} 
+               
+            }
+        }
+    }
+    if(lr==2)    
+    {
+        //slope=fineDDD(startLine,endLine,left[startLine],x);
+        slope=(x -right[startLine])/(double)(endLine -startLine);
+        
+        for(i=startLine+1;i<endLine;i++)
+        {
+      right[i]=(int)(right[startLine]+(i-startLine)*slope);
+        gpHREE[60-i][right[i]]=2;
+        }
+            right[endLine]=x;
+         for(i=59-endLine;i>=0;i--)
+       {
+            if(get_gp(i,right[59-i],gpHREE)==true)
+          {
+             
+              for(j=right[59-i];j>=0;j--)
+              {
+                  if(get_gp(i,j,gpHREE)==false)
+                  {
+                      right[60-i]=j+1;
+                      //set_gp(i,j,gpHREE,2);
+                      break;
+                  }
+              }
+
+          }
+          if(j==-1){right[60-i]=0;j=0;}
+          if(get_gp(i,right[59-i],gpHREE)==false)
+          {
+              for(j=right[59-i];j<80;j++)
+              {
+                 if(get_gp(i,j,gpHREE))
+                 {
+                     //set_gp(i,j,gpHREE,2);
+                     right[60-i]=j;
+                     break;
+                 }             
+              }
+              if(j==80){right[60-i]=j-1;j=0;}
+
+          }
+
+        }
+    }
 }
+
+void findLine(unsigned char **gpHREE)
+    {
+        int i,j,k;
+        int leftError=0;
+        int leftChange=0;
+        int leftChange_FirstFlag=0;
+        double leftXmen_slope=0;
+        int rightError=0;
+        int rightChange=0;
+        int rightChange_FirstFlag=0;
+        double rightXmen_slope=0;
+   // for(i=0;i<61;i++)
+   // printf("left[%d]=%d  \r\n",i,left[i]);
+    //if(get_gp(59,40,gpHREE)==true)
+    //   left[0]=0,right[0]=79;
+    /*    if(get_gp(45,40,gpHREE)==true)
+    {
+        if(k>STRAIGHT)k=LEFT;
+        else k=RIGHT;
+       FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,k);
+        return 0;
+    }*/
+        if(gpHREE[59][40]!=0)
+       {
+        left[0]=0;right[0]=79;
+       }
+        for(i=59;i>=0;i--)
+       {
+
+         if(get_gp(i,left[59-i],gpHREE)==true)
+         {
+            for(j=left[59-i];j<80;j++)
+            {
+             // printf("->left[%d]=%d \r\n",60-i,j); 
+            if(get_gp(i,j,gpHREE)==false)
+                   {
+                       //set_gp(i,j,gpHREE,3);
+                     left[60-i]=j-1;
+                        break;
+                   }
+            }
+         if(j==80){left[60-i]=79;j=0;}
+           leftError=0;
+         }
+         
+         
+         if(get_gp(i,left[59-i],gpHREE)==false) 
+            {
+              
+                for(j=left[59-i];j>=0;j--)
+               {
+                   //printf("<-left[%d]=%d \r\n",60-i,j);
+                    if(get_gp(i,j,gpHREE))
+                    {
+                        //set_gp(i,j,gpHREE,3);
+                        left[60-i]=j;
+                        break;
+                    }
+                }
+               if(j==-1){left[60-i]=0;j=0;} 
+               if(leftError==0&&leftChange_FirstFlag==0)
+               {
+               leftChange=59-i;
+                //   printf("leftChange=%d    j=%d\r\n",leftChange,j);
+                   //OLED_showint2char(83,0,leftChange);
+               }
+
+               leftError++;
+               // printf("leftChange=%d    j=%d\r\n",leftChange,j);   
+
+               if(leftError==3&&leftChange_FirstFlag==0)
+               {
+                   leftChange_FirstFlag=1;
+                   leftXmen=leftChange;
+                 //  printf("leftXmen=%d\r\n",leftXmen);
+                  // OLED_showint2char(83,1,leftXmen);
+               }
+            }
+            
+            if(get_gp(i,right[59-i],gpHREE)==true)
+          {
+             
+              for(j=right[59-i];j>=0;j--)
+              {
+                  if(get_gp(i,j,gpHREE)==false)
+                  {
+                      right[60-i]=j+1;
+                      //set_gp(i,j,gpHREE,2);
+                      break;
+                  }
+              }
+              rightError=0;
+          }
+          if(j==-1){right[60-i]=0;j=0;}
+          if(get_gp(i,right[59-i],gpHREE)==false)
+          {
+              for(j=right[59-i];j<80;j++)
+              {
+                 if(get_gp(i,j,gpHREE))
+                 {
+                     //set_gp(i,j,gpHREE,2);
+                     right[60-i]=j;
+                     break;
+                 }             
+              }
+              if(j==80){right[60-i]=j-1;j=0;}
+              if(rightError==0&&rightChange_FirstFlag==0)
+               {
+               rightChange=59-i;
+                //   printf("rightChange=%d    j=%d\r\n",rightChange,j);
+                   //OLED_showint2char(83,0,rightChange);
+               }
+
+               rightError++;
+               // printf("rightChange=%d    j=%d\r\n",rightChange,j);   
+
+               if(rightError==3&&rightChange_FirstFlag==0)
+               {
+                   rightChange_FirstFlag=1;
+                   rightXmen=rightChange;
+                 //  printf("rightXmen=%d\r\n",rightXmen);
+                  // OLED_showint2char(83,1,rightXmen);
+               }
+          }
+        // printf("left[%d]=%d        right[%d]=%d    i=%d\r\n",60-i,left[60-i],60-i,right[60-i],i);
+        }
+       /**********************************************************************************************/
+       //左边寻点补线
+      if(leftChange_FirstFlag==1&&leftXmen>=4)
+        {
+           leftChange_FirstFlag=0;
+            //leftXmen_slope=findD(leftXmen-4,leftXmen-1,left);
+           leftXmen_slope=0;
+           //printf("leftXmen_slope=%f\r\n",leftXmen_slope);
+            int leftUpFlag;
+           for(i=59-leftXmen;i>=0;i--)
+           {
+               leftUpFlag=(int)(left[leftXmen]+(60-i-leftXmen)*leftXmen_slope);
+                //printf("1.gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]); 
+               //printf("gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]);     
+               if(get_gp(i,leftUpFlag,gpHREE)==true)
+               {
+                   if(right[60-i]<=leftUpFlag)
+                   {
+                       break;
+                   }
+               //printf("gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]); 
+                   i=i-5;
+                   for(j=leftUpFlag;j<=79;j++)
+                   {
+                       if(get_gp(i,j,gpHREE)==false)
+                       {
+                           j=j-1;
+                           break;
+                       }
+                       
+                   }
+                   //printf("2.gpHREE[%d][%d]=%d\r\n",i,j,gpHREE[i][j]); 
+                   for(i=i+1;i<60-leftXmen;i++)
+                   {
+                       k=j;
+                       //printf("3.gpHREE[%d][%d]=%d\r\n",i-1,k,gpHREE[i-1][k]); 
+                       if(get_gp(i,j,gpHREE)==true)
+                       {
+                            for(;j<80;j++)
+                            {
+             // printf("->left[%d]=%d \r\n",60-i,j); 
+                                if(get_gp(i,j,gpHREE)==false)
+                                {
+                       //set_gp(i,j,gpHREE,3);
+                     
+                                    break;
+                                }
+                            }
+                            if(j==80){}
+           
+                      }        
+                      if(get_gp(i,j,gpHREE)==false) 
+                      {
+                        for(;j>=0;j--)
+                        {
+                   //printf("<-left[%d]=%d \r\n",60-i,j);
+                            if(get_gp(i,j,gpHREE))
+                            {
+                        //set_gp(i,j,gpHREE,3);  
+                                break;
+                            }
+                        }
+                        if(j==-1){break;} 
+                        if(j-k>=3){break;}
+                     }
+                        
+                       //if(get_gp(i,j,gpHREE)==false)
+                      // for()
+                 }
+           // leftXmen_slope=findDDD(leftXmen,60-(i-1),left);
+                if(j==-1)
+             CoverLine(leftXmen,60-(i-1),k,1,gpHREE);      
+     
+
+                   break;
+               }
+           }
+       }
+ /**********************************************************************************************/       
+       //右边寻点补线
+      if(rightChange_FirstFlag==1&&rightXmen>=4)
+        {
+           rightChange_FirstFlag=0;
+            //rightXmen_slope=findD(rightXmen-4,rightXmen-1,right);
+           rightXmen_slope=0;
+           //printf("rightXmen_slope=%f\r\n",rightXmen_slope);
+            int rightUpFlag;
+           for(i=59-rightXmen;i>=0;i--)
+           {
+               rightUpFlag=(int)(right[rightXmen]+(60-i-rightXmen)*rightXmen_slope);
+                //printf("1.gpHREE[%d][%d]=%d\r\n",i,rightUpFlag,gpHREE[i][rightUpFlag]); 
+               //printf("gpHREE[%d][%d]=%d\r\n",i,rightUpFlag,gpHREE[i][rightUpFlag]);     
+               if(get_gp(i,rightUpFlag,gpHREE)==true)
+               {
+                   if(left[60-i]>=rightUpFlag)
+                   {
+                       break;
+                   }
+                   i=i-5;
+               //printf("gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]); 
+                   for(j=rightUpFlag;j>=0;j--)
+                   {
+                       if(get_gp(i,j,gpHREE)==false)
+                       {
+                           j=j+1;
+                           break;
+                       }
+                       
+                   }
+                   
+                   //printf("2.gpHREE[%d][%d]=%d\r\n",i,j,gpHREE[i][j]); 
+                   for(i=i+1;i<60-rightXmen;i++)
+                   {
+                       k=j;
+                       //printf("3.gpHREE[%d][%d]=%d\r\n",i-1,k,gpHREE[i-1][k]); 
+                       if(get_gp(i,j,gpHREE)==true)
+                       {
+                            for(;j>=0;j--)
+                            {
+             // printf("->left[%d]=%d \r\n",60-i,j); 
+                                if(get_gp(i,j,gpHREE)==false)
+                                {
+                       //set_gp(i,j,gpHREE,3);
+                     
+                                    break;
+                                }
+                            }
+                            if(j==-1){}
+           
+                      }        
+                      if(get_gp(i,j,gpHREE)==false) 
+                      {
+                        for(;j<80;j++)
+                        {
+                   //printf("<-left[%d]=%d \r\n",60-i,j);
+                            if(get_gp(i,j,gpHREE))
+                            {
+                        //set_gp(i,j,gpHREE,3);  
+                                break;
+                            }
+                        }
+                        if(j==80){break;} 
+                        if(k-j>=3){break;}
+                     }
+                        
+                       //if(get_gp(i,j,gpHREE)==false)
+                      // for()
+                 }
+           // leftXmen_slope=findDDD(leftXmen,60-(i-1),left);
+                if(j==80)
+             CoverLine(rightXmen,60-(i-1),k,2,gpHREE);      
+     
+
+                   break;
+               }
+           }
+       }
+    }
+
 
 int p;
 int m,k,k0=STRAIGHT;
@@ -281,92 +703,12 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
     }
     */
 
-    int i,j;
-    int close=45,close_f=0;//取值范围
-    int l;//封闭标准
-    /*******************************************************************************************************/
-    int left[61]={40,40},right[61]={40,40};
-   // for(i=0;i<61;i++)
-   // printf("left[%d]=%d  \r\n",i,left[i]);
-    //if(get_gp(59,40,gpHREE)==true)
-    //   left[0]=0,right[0]=79;
-    /*    if(get_gp(45,40,gpHREE)==true)
-    {
-        if(k>STRAIGHT)k=LEFT;
-        else k=RIGHT;
-       FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,k);
-        return 0;
-    }*/
-    if(gpHREE[59][40]!=0)
-    {
-        left[0]=0;right[0]=79;
-    }
-    for(i=59;i>=0;i--)
-       {
-         if(get_gp(i,left[59-i],gpHREE)==true)
-         {
-            for(j=left[59-i];j<80;j++)
-            {
-             // printf("->left[%d]=%d \r\n",60-i,j); 
-            if(get_gp(i,j,gpHREE)==false)
-                   {
-                       //set_gp(i,j,gpHREE,3);
-                     left[60-i]=j;
-                        break;
-                   }
-            }
-         }
-         if(j==80){left[60-i]=79;j=0;}
-         
-         if(get_gp(i,left[59-i],gpHREE)==false) 
-            {
-              
-                for(j=left[59-i];j>=0;j--)
-               {
-                   //printf("<-left[%d]=%d \r\n",60-i,j);
-                    if(get_gp(i,j,gpHREE))
-                    {
-                        //set_gp(i,j,gpHREE,3);
-                        left[60-i]=j+1;
-                        break;
-                    }
-                }
-            }
-            if(j==-1){left[60-i]=0;j=0;} 
-            if(get_gp(i,right[59-i],gpHREE)==true)
-          {
-             
-              for(j=right[59-i];j>=0;j--)
-              {
-                  if(get_gp(i,j,gpHREE)==false)
-                  {
-                      right[60-i]=j;
-                      //set_gp(i,j,gpHREE,2);
-                      break;
-                  }
-              }
-          }
-          if(j==-1){right[60-i]=0;j=0;}
-          if(get_gp(i,right[59-i],gpHREE)==false)
-          {
-              for(j=right[59-i];j<80;j++)
-              {
-                 if(get_gp(i,j,gpHREE))
-                 {
-                     //set_gp(i,j,gpHREE,2);
-                     right[60-i]=j-1;
-                     break;
-                 }             
-              }
-              if(j==80){right[60-i]=j-1;j=0;}
-              
-          }
 
-              CoverLine();//补线
-         // printf("left[%d]=%d        right[%d]=%d\r\n",60-i,left[60-i],60-i,right[60-i]);
-        }
+    /*******************************************************************************************************/
+     findLine(gpHREE);
     /***********************************************************************************************************************/
-        int aaa=0,bbb=0,Dmunber=0;
+        int i,j;
+    int aaa=0,bbb=0,Dmunber=0;
        for(i=1,l=0;i<=45&&l==0;i++)
         {
             if(bbb==0&&left[i]>right[i])
@@ -442,7 +784,7 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
     average=findP(close);
 
 //subtense=findD(3,10,img);
-                   xl = findDD(5,25);
+                   xl = findDD(5,25,img);
     if(average>0){
         q= 0.25*0.7;
         w= 0.3;
@@ -488,7 +830,7 @@ else if(close_f==2)
           //  subtense=findD(3,6,img);
 }
 else OLED_ShowStr(83,6,"     ");//subtense=0;
-    OLED_showint2char(83,7,k);
+    //OLED_showint2char(83,7,k);
     //int2char(83,5,subtense);
     p=0;
     }

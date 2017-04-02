@@ -94,6 +94,7 @@ void show(uint8_t* upDateImage,uint8_t** ppData){
     #if 1
         for(y = 0; y < 60; y++)
     {
+        printf("%2d ",y);
         for(x = 0; x < 80; x++)
         {
             printf("%d",*(upDateImage+x+y*80));
@@ -552,14 +553,15 @@ int main(void)
          camera_get_image();
          SerialDispCCDImage(80,60,gpHREF,upDateImage);
         //OLED_DrawBMP(80,60,gpHREF);
+          
         handle(up_gpHREF,PWM_Motor,steer_q,steer_w,motor_e,motor_f);
-        //show(upDateImage,gpHREF);
+         //show(upDateImage,gpHREF);
         if(a==20)
         {
         OLED_DrawBMP(0,0,OV7620_H,OV7620_W,upDateImage);
         //printf("LPTMR:%dHz\r\n", value);
-        OLED_showint2char(83,0,(int)(LeftSpeed));
-        OLED_showint2char(83,1,(int)(RightSpeed));   
+        //OLED_showint2char(83,0,(int)(LeftSpeed));
+        //OLED_showint2char(83,1,(int)(RightSpeed));   
         //OLED_showint2char(83,0,z);
         //OLED_showint2char(83,1,(int)(steer_q*100));
         //OLED_showint2char(83,2,(int)(steer_w*100));
