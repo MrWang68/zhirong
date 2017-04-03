@@ -8,6 +8,7 @@
 #include "ssd1306.h"
 #include "ov7725.h"
 #include "i2c.h"
+#include "math.h"
 
 double  img[60+1];
 double  average,carI,subtense;
@@ -15,16 +16,18 @@ double xl;
 int xielvnum = -1;
 int xielvnum2 = -1;
 int xielvnum3 = -1;
-    
+double pi = 3.1415926535;
+double kuan = 5.5, chang = 20, chasu = 0;
+int leftv = 0, rightv = 0;
 
 int close=45,close_f=0;//取值范围
 int l;//封闭标准
-int left[61]={40,40},right[61]={40,40};
+    int left[61]={40,40},right[61]={40,40};
 
 int leftXmen;
 
 int rightXmen;
-
+    
 bool get_gp(int i,int j,unsigned char **gpHREE){
     unsigned char c=gpHREE[i][j];
 if(c) return true;
@@ -90,7 +93,6 @@ int myabs(int a){
 }
 //比较大小
 int findm(int a,int b,int flag){
-    int rt;
     if(flag == 0) //max
     {
     if(a >= b)
@@ -107,7 +109,12 @@ int findm(int a,int b,int flag){
     }
 }
 
-
+/*舵机转换成角度的tangent值*/
+double anglech(int k){
+	double angle = 0;
+	angle = (double)k*8.5/40 ;
+	return tan(angle*pi/180);
+}
 
 /*
 **findD(18,20,left)
@@ -148,15 +155,14 @@ double findD(uint8_t begin,uint8_t end,int *p)
      // if((myabs(resultsum/5-resultlast)) > 1)
             resultlast = resultsum/10;
       resultsum = 0;
-      xielvnum = -1;
+      xielvnum = 0;
   }
       xielvnum++;
   result = resultlast;
+  
   return result;
 
 }
-
-
 
 //??????
 double findDD(int m, int n,double *p){
@@ -166,10 +172,10 @@ double findDD(int m, int n,double *p){
     int a[5],b[5],k[4] = {1,4,2,1};
     double xielvs,xl[5];
 	a[0] = 0;
-	b[0] = m-1;
+	b[0] = m;
 	xl[0] = 0;
 	for(int i=1;i<5;i++){
-		a[i] = b[i-1]+1;
+		a[i] = b[i-1];
 		b[i] = a[i]+(n-m)*k[i-1]/8;
 		if(b[i] - a[i] == 0)
 			xl[i] = 0;
@@ -191,7 +197,7 @@ double findDD(int m, int n,double *p){
     //  if((myabs(xielvsum/5-xielvlast)) > 1)
          xielvlast = xielvsum/10;
       xielvsum = 0;
-      xielvnum2 = -1;
+      xielvnum2 = 0;
   }
       xielvnum2++;
     xielv = xielvlast;
@@ -199,28 +205,32 @@ double findDD(int m, int n,double *p){
     return xielv*100;
 }
 
-
 /*
-double findDDD(int m, int n,int my,int ny)
-    {
+double findDDD(int m, int n, int *p){
     double xielv2 = 0;
     static double xielv2last,xielv2sum;
+
 		if(n - m == 0)
 			xielv2 = 0;
 		else
-			xielv2 =(double)(ny - my)/(n - m);
-        
+			xielv2 =(double)(p[n] - p[m])/(n - m);
+	
+	if(xielv2 > 80)
+        xielv2 = 80;
+    else if(xielv2 < -80)
+        xielv2 = -80;
+    
   if(xielvnum3 < 0)
       xielv2last = xielv2;
   
-  else if(xielvnum3 >= 0 && xielvnum3 < 10){
+  else if(xielvnum3 >= 0 && xielvnum3 < 5){
       xielv2sum += xielv2;
    }
   else {
     //  if((myabs(xielvsum/5-xielvlast)) > 1)
-      xielv2last = xielv2sum/10;
+         xielv2last = xielv2sum/5;
       xielv2sum = 0;
-      xielvnum3 = -1;
+      xielvnum3 = 0;
   }
       xielvnum3++;
     xielv2 = xielv2last;
@@ -228,8 +238,6 @@ double findDDD(int m, int n,int my,int ny)
     return xielv2;
 }
 */
-
-
 
 double findR(int* a,int i,int v)
 {
@@ -287,22 +295,8 @@ double findR(int* a,int i,int v)
     }
    return b;
 }
-/*
-void handle(unsigned char **gpHREE)
-{ 
-    int i,j,k;
-    for(i=0;i<60;i++)
-    {
-        for(j=0;j<80;j++)
-        {
-        get_gp(i,j,gpHREE);
-            
-        }
-        printf("\r\n");
-    }
-}
-*/
-void CoverLine(int startLine,int endLine,int x,int lr,unsigned char **gpHREE)
+
+void CoverLine(int startLine,int endLine,int x,int lr,unsigned char **gpHREE,int *left,int *right)
     {
         int i,j;
         double slope=0;
@@ -402,7 +396,7 @@ void CoverLine(int startLine,int endLine,int x,int lr,unsigned char **gpHREE)
     }
 }
 
-void findLine(unsigned char **gpHREE)
+void findLine(unsigned char **gpHREE,int *left,int *right)
     {
         int i,j,k;
         int leftError=0;
@@ -443,7 +437,7 @@ void findLine(unsigned char **gpHREE)
                         break;
                    }
             }
-         if(j==80){left[60-i]=79;j=0;}
+         if(j==80){left[60-i]=79;}
            leftError=0;
          }
          
@@ -461,26 +455,29 @@ void findLine(unsigned char **gpHREE)
                         break;
                     }
                 }
-               if(j==-1){left[60-i]=0;j=0;} 
-               if(leftError==0&&leftChange_FirstFlag==0)
+               if(j==-1){left[60-i]=0;} 
+              // printf("0.leftChange_FirstFlag=%d   left[59-i]=%d  leftError=%d\r\n",leftChange_FirstFlag,left[59-i],leftError);
+               if(leftChange_FirstFlag==0&&left[59-i]!=0&&leftError==0)
                {
                leftChange=59-i;
-                //   printf("leftChange=%d    j=%d\r\n",leftChange,j);
+                  // printf("1.leftChange=%d   i=%d  leftError=%d\r\n",leftChange,i,leftError);
                    //OLED_showint2char(83,0,leftChange);
                }
-
-               leftError++;
+               if(leftChange_FirstFlag==0&&leftChange>0)
+               {
+                   //printf("2.leftChange=%d   i=%d  leftError=%d\r\n",leftChange,i,leftError);
+                   leftError++;
+               }
                // printf("leftChange=%d    j=%d\r\n",leftChange,j);   
-
                if(leftError==3&&leftChange_FirstFlag==0)
                {
                    leftChange_FirstFlag=1;
                    leftXmen=leftChange;
-                 //  printf("leftXmen=%d\r\n",leftXmen);
+                   //printf("leftXmen=%d   hang=%d\r\n",leftXmen,59-i);
                   // OLED_showint2char(83,1,leftXmen);
                }
             }
-            
+         // printf("left[%d]=%d  j=%d         i=%d\r\n",60-i,left[60-i],j,i);
             if(get_gp(i,right[59-i],gpHREE)==true)
           {
              
@@ -495,7 +492,7 @@ void findLine(unsigned char **gpHREE)
               }
               rightError=0;
           }
-          if(j==-1){right[60-i]=0;j=0;}
+          if(j==-1){right[60-i]=0;}
           if(get_gp(i,right[59-i],gpHREE)==false)
           {
               for(j=right[59-i];j<80;j++)
@@ -507,30 +504,30 @@ void findLine(unsigned char **gpHREE)
                      break;
                  }             
               }
-              if(j==80){right[60-i]=j-1;j=0;}
-              if(rightError==0&&rightChange_FirstFlag==0)
+              if(j==80){right[60-i]=j-1;}
+              if(rightChange_FirstFlag==0&&right[59-i]!=79&&rightError==0)
                {
                rightChange=59-i;
-                //   printf("rightChange=%d    j=%d\r\n",rightChange,j);
-                   //OLED_showint2char(83,0,rightChange);
+                   //printf("rightChange=%d    j=%d\r\n",rightChange,j);
+                   //OLED_showint2char(83,0,rightChange); 
                }
-
-               rightError++;
+                if(rightChange_FirstFlag==0&&rightChange>0)
+                rightError++;
                // printf("rightChange=%d    j=%d\r\n",rightChange,j);   
 
                if(rightError==3&&rightChange_FirstFlag==0)
                {
                    rightChange_FirstFlag=1;
                    rightXmen=rightChange;
-                 //  printf("rightXmen=%d\r\n",rightXmen);
+                  // printf("rightXmen=%d\r\n",rightXmen);
                   // OLED_showint2char(83,1,rightXmen);
                }
           }
         // printf("left[%d]=%d        right[%d]=%d    i=%d\r\n",60-i,left[60-i],60-i,right[60-i],i);
         }
        /**********************************************************************************************/
-       //左边寻点补线
-      if(leftChange_FirstFlag==1&&leftXmen>=4)
+       //?????~??21??
+      if(leftChange_FirstFlag==1&&leftXmen>2)
         {
            leftChange_FirstFlag=0;
             //leftXmen_slope=findD(leftXmen-4,leftXmen-1,left);
@@ -540,19 +537,14 @@ void findLine(unsigned char **gpHREE)
            for(i=59-leftXmen;i>=0;i--)
            {
                leftUpFlag=(int)(left[leftXmen]+(60-i-leftXmen)*leftXmen_slope);
-                //printf("1.gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]); 
-               //printf("gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]);     
+              //printf("1.gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]); 
+               
                if(get_gp(i,leftUpFlag,gpHREE)==true)
                {
-                   if(right[60-i]<=leftUpFlag)
-                   {
-                       break;
-                   }
-               //printf("gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]); 
-                   i=i-5;
+                   i=i-3;
                    for(j=leftUpFlag;j<=79;j++)
                    {
-                       if(get_gp(i,j,gpHREE)==false)
+                       if(get_gp(i,j,gpHREE)==false&&get_gp(i,j-1,gpHREE)==true)
                        {
                            j=j-1;
                            break;
@@ -591,15 +583,15 @@ void findLine(unsigned char **gpHREE)
                             }
                         }
                         if(j==-1){break;} 
-                        if(j-k>=3){break;}
+                        if(k-j>=3){break;}
                      }
                         
                        //if(get_gp(i,j,gpHREE)==false)
                       // for()
                  }
            // leftXmen_slope=findDDD(leftXmen,60-(i-1),left);
-                if(j==-1)
-             CoverLine(leftXmen,60-(i-1),k,1,gpHREE);      
+             if(right[60-(i-1)]>k&&60-(i-1)<60&&k<80&&k>=0)
+             CoverLine(leftXmen,60-(i-1),k,1,gpHREE,left,right);      
      
 
                    break;
@@ -607,8 +599,8 @@ void findLine(unsigned char **gpHREE)
            }
        }
  /**********************************************************************************************/       
-       //右边寻点补线
-      if(rightChange_FirstFlag==1&&rightXmen>=4)
+       //?????~??21??
+      if(rightChange_FirstFlag==1&&rightXmen>2)
         {
            rightChange_FirstFlag=0;
             //rightXmen_slope=findD(rightXmen-4,rightXmen-1,right);
@@ -619,18 +611,15 @@ void findLine(unsigned char **gpHREE)
            {
                rightUpFlag=(int)(right[rightXmen]+(60-i-rightXmen)*rightXmen_slope);
                 //printf("1.gpHREE[%d][%d]=%d\r\n",i,rightUpFlag,gpHREE[i][rightUpFlag]); 
-               //printf("gpHREE[%d][%d]=%d\r\n",i,rightUpFlag,gpHREE[i][rightUpFlag]);     
+               //printf("gpHREE[%d][%d]=%d\r\n",i,rightUpFlag,gpHREE[i][rightUpFlag]);  
+                   
                if(get_gp(i,rightUpFlag,gpHREE)==true)
                {
-                   if(left[60-i]>=rightUpFlag)
-                   {
-                       break;
-                   }
-                   i=i-5;
+                   i=i-3;
                //printf("gpHREE[%d][%d]=%d\r\n",i,leftUpFlag,gpHREE[i][leftUpFlag]); 
                    for(j=rightUpFlag;j>=0;j--)
                    {
-                       if(get_gp(i,j,gpHREE)==false)
+                       if(get_gp(i,j,gpHREE)==false&&get_gp(i,j+1,gpHREE)==true)
                        {
                            j=j+1;
                            break;
@@ -670,15 +659,15 @@ void findLine(unsigned char **gpHREE)
                             }
                         }
                         if(j==80){break;} 
-                        if(k-j>=3){break;}
+                        if(j-k>=3){break;}
                      }
                         
                        //if(get_gp(i,j,gpHREE)==false)
                       // for()
                  }
            // leftXmen_slope=findDDD(leftXmen,60-(i-1),left);
-                if(j==80)
-             CoverLine(rightXmen,60-(i-1),k,2,gpHREE);      
+                if(left[60-(i-1)]<k&&60-(i-1)<60&&k<80&&k>=0)
+             CoverLine(rightXmen,60-(i-1),k,2,gpHREE,left,right);      
      
 
                    break;
@@ -690,7 +679,11 @@ void findLine(unsigned char **gpHREE)
 
 int p;
 int m,k,k0=STRAIGHT;
-double ka,kdd;
+    double ka,kdd;
+int ki = 0;//k的次数
+    int ksum[4],kout=0;
+double csu[5], chasuout = 0;
+int ci = 0;
 
 int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,double f)
 {  
@@ -703,12 +696,18 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
     }
     */
 
-
     /*******************************************************************************************************/
-     findLine(gpHREE);
+     findLine(gpHREE,left,right);
     /***********************************************************************************************************************/
-        int i,j;
-    int aaa=0,bbb=0,Dmunber=0;
+    
+    int i,j;
+    double xishu = kuan/(2*chang);
+    
+    /*******************************************************************************************************/
+
+
+    /***********************************************************************************************************************/
+        int aaa=0,bbb=0,Dmunber=0;
        for(i=1,l=0;i<=45&&l==0;i++)
         {
             if(bbb==0&&left[i]>right[i])
@@ -779,67 +778,88 @@ int handle(unsigned char **gpHREE,int PWM_Motor,double q,double w,double e,doubl
         }*/
 
         if(aaa<=3)
-{
-                    // printf("close=%d\r\n",close);
-    average=findP(close);
-
-//subtense=findD(3,10,img);
-                   xl = findDD(5,25,img);
-    if(average>0){
-        q= 0.25*0.7;
-        w= 0.3;
-    k=q*average*average+w*xl;
-        ka = q*average*average;
-        kdd = w*xl;
-    }
-    
-    else {
-        q= 0.25*0.7;
-        w= 0.35;
-    k=-q*average*average+w*xl;
-        ka = -q*average*average;
-        kdd = w*xl;
-        //kdd = tan(w);
-    }
-    
-    m=e*average*average+f*subtense;
-    //turnStr();
-    //printf("k=%d\r\n",k);
-    
-
-    
-    if(p==10)
     {
-/*
-    OLED_showint2char(83,1,k);
-    OLED_showint2char(83,2,ka);
-    OLED_showint2char(83,3,average);
-    OLED_showint2char(83,4,kdd);
-    OLED_showint2char(83,5,xl);
-*/
-         if(close_f==1)
-{
-   // OLED_ShowStr(83,1,"left ");
-    //subtense=findR(left,close,close_f);
-           // subtense=findD(3,6,img);
-}
-else if(close_f==2)
-{
-    // OLED_ShowStr(83,1,"right");
-    //subtense=findR(right,close,close_f);
-          //  subtense=findD(3,6,img);
-}
-else OLED_ShowStr(83,6,"     ");//subtense=0;
-    //OLED_showint2char(83,7,k);
-    //int2char(83,5,subtense);
-    p=0;
-    }
-    else{
-        p++;
-    }
+        // printf("close=%d\r\n",close);
+        //subtense=findD(3,10,img);
+        average=findP(close);
+        xl = findDD(4,findm(31,close-1,0),img);
+        if(average>0){
+            // q= 0.25*0.7;
+            // w= 0.3;
+            k =q*average*average+w*xl;
+            ka = q*average*average;
+            kdd = w*xl;
+        }
+        
+        else {
+            //   q= 0.25*0.7;
+            //   w= 0.35;
+            k=-q*average*average+(w+0.03)*xl;
+            ka = -q*average*average;
+            kdd = w*xl;
+        }
+        
+    //每3次输出改变一次k值，为前三次测量的平均值
+        if(ki < 3){
+            ksum[ki] = k;
+            ki++;
+        }
+        else if(ki >= 3){
+            ki = 0;
+            kout = (ksum[0]+ksum[1]+ksum[2])/3;
+        }
+        k = kout; 
+   // printf("k = %d\r\n",k);
+      //每4次输出改变一次chasu值，为前四次测量的平均值
+    /*        
+    if(k>160)
+        k=160;
+    if(k<-160)
+        k=-160;
+               */
+        chasu = xishu*anglech(k);  
+    /*    if(ci < 4){
+            csu[ci] = chasu;
+            ci++;
+        }
+        else{
+            ci = 0;
+            chasuout = (csu[0]+csu[1]+csu[2]+csu[3])/4;
+        }
+        chasu = chasuout;*/        
+        leftv = (int)(PWM_Motor * (1 + chasu));
+        rightv = (int)(PWM_Motor * (1 - chasu));
+             //   printf("chasu = %f\r\n",chasu);
     
-    //k = 1.5*xl;
-    //k=1.8*xl;
+        if(p==10)
+        {
+          /*  OLED_showint2char(83,1,leftv);
+            OLED_showint2char(83,2,rightv);
+            OLED_showint2char(83,3,chasu*1000);
+            OLED_showint2char(83,4,k);
+            OLED_showint2char(83,5,kdd);*/
+
+            if(close_f==1)
+            {
+                //  OLED_ShowStr(83,12,"left ");
+                //subtense=findR(left,close,close_f);
+            // subtense=findD(3,6,img);
+            }
+            else if(close_f==2)
+            {
+                //  OLED_ShowStr(83,12,"right");
+                //subtense=findR(right,close,close_f);
+                //  subtense=findD(3,6,img);
+            }
+            else  // OLED_ShowStr(83,6,"     ");//subtense=0;
+                    //  OLED_showint2char(83,7,k);
+                    //int2char(83,5,subtense);
+                p=0;
+        }
+        else{
+            p++;
+        }
+    
     /*
     if(k>0&&k0>0)
     {
@@ -873,15 +893,17 @@ else OLED_ShowStr(83,6,"     ");//subtense=0;
     k0=(k+D*k0)/(D+1); 
     }
     */
-    k=k+STRAIGHT;
+    
+ //   k=k+STRAIGHT;
     
 
       //OLED_ShowStr(x,y,*str);
     //printf("k=%d\r\n",k);
-    if(k>LEFT)
+    
+/*    if(k>LEFT)
         k=LEFT;
     if(k<RIGHT)
-        k=RIGHT;
+        k=RIGHT;*/
 }
  /* else
   {
@@ -891,18 +913,30 @@ else OLED_ShowStr(83,6,"     ");//subtense=0;
           k=RIGHT;
   } */
   //printf("k=%d\r\n",k);
-   FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,k);
 
+        k=k+STRAIGHT;
+    
+    if(k>LEFT)
+        k=LEFT;
+    if(k<RIGHT)
+        k=RIGHT;
+   FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,k);
+   /*
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,rightv); // 0 - 10000  to 0% - 100% 右轮
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,leftv); // 0 - 10000  to 0% - 100%   左轮
+*/
+
+/*
 if(average>0)
 {
-    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,PWM_Motor+m); // 0 - 10000  to 0% - 100% 右轮
-    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,PWM_Motor); // 0 - 10000  to 0% - 100%   左轮
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,PWM_Motor+kout*4); // 0 - 10000  to 0% - 100% 右轮
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,PWM_Motor-kout*2); // 0 - 10000  to 0% - 100%   左轮
 }
 else
 {
-    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,PWM_Motor); // 0 - 10000  to 0% - 100% 右轮
-    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,PWM_Motor+m); // 0 - 10000  to 0% - 100%   左轮
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,PWM_Motor-kout*2); // 0 - 10000  to 0% - 100% 右轮
+    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,PWM_Motor+kout*4); // 0 - 10000  to 0% - 100%   左轮
 }
-
+*/
     return 0;
 }

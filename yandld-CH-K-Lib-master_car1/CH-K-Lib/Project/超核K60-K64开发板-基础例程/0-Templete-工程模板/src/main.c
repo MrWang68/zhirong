@@ -64,9 +64,9 @@ typedef enum
 }OV7620_Status;
   uint8_t status = TRANSFER_IN_PROCESS;
 
-int PWM_Motor=7100;
-double steer_q=0.25,steer_w=0,motor_e=1,motor_f=0;
-
+int PWM_Motor=6800;
+double steer_q=0.4*0.9,steer_w=0.4,motor_e=0,motor_f=0;
+float P=0.6,I=0,D=0;
 
 void SerialDispCCDImage(int xSize, int ySize, uint8_t** ppData,uint8_t* upDateImage)
 {
@@ -81,12 +81,10 @@ void SerialDispCCDImage(int xSize, int ySize, uint8_t** ppData,uint8_t* upDateIm
             *(upDateImage+(x-1)*8+y*xSize+3)=(ppData[y][x]>>4) & 0x01;
             *(upDateImage+(x-1)*8+y*xSize+4)=(ppData[y][x]>>3) & 0x01;
             *(upDateImage+(x-1)*8+y*xSize+5)=(ppData[y][x]>>2) & 0x01;
-            *(upDateImage+(x-1)*8+y*xSize+6)=(ppData[y][x]>>2) & 0x01;
+            *(upDateImage+(x-1)*8+y*xSize+6)=(ppData[y][x]>>1) & 0x01;
             *(upDateImage+(x-1)*8+y*xSize+7)=(ppData[y][x]>>0) & 0x01;
         }
     }
-    
-
     
 }
 void show(uint8_t* upDateImage,uint8_t** ppData){
@@ -94,7 +92,7 @@ void show(uint8_t* upDateImage,uint8_t** ppData){
     #if 1
         for(y = 0; y < 60; y++)
     {
-        printf("%2d ",y);
+        printf("%2d  ",y);
         for(x = 0; x < 80; x++)
         {
             printf("%d",*(upDateImage+x+y*80));
@@ -128,11 +126,16 @@ void show(uint8_t* upDateImage,uint8_t** ppData){
 }
 
 
-float g_fDirectionControlOut2=0,g_fDirectionControlOutOld=0,g_fDirectionControlOutNew=0,V_error=0;
+float g_fDirectionControlOutl1=0,g_fDirectionControlOutl2=0,g_fDirectionControlOutOld=0,g_fDirectionControlOutlNew=0,V_error=0;
+float g_fDirectionControlOutr1=0,g_fDirectionControlOutr2=0,g_fDirectionControlOutrNew=0;
+float pl ,il ,dl ,pr ,ir ,dr; 
+int loutPWM = 0, loutPWMold = 6800, routPWM = 0, routPWMold = 6800;
 typedef struct PID 
 {  
-    float V_lasterror; //Error[-1]    
-    float V_preserror; //Error[-2]
+    float V_llasterror; //Error[-1]    
+    float V_lpreserror; //Error[-2]
+    float V_rlasterror; //Error[-1]    
+    float V_rpreserror; //Error[-2]
 }PID;
  
  static PID sPID; 
@@ -141,35 +144,63 @@ typedef struct PID
  
 void PID_Init(void)  
 { 
-    sptr->V_lasterror = 0; //Error[-1] 
-    sptr->V_preserror = 0; //Error[-2]   
+    sptr->V_llasterror = 0; //Error[-1] 
+    sptr->V_lpreserror = 0; //Error[-2]   
+    sptr->V_rlasterror = 0; //Error[-1] 
+    sptr->V_rpreserror = 0; //Error[-2]   
 }
-float P=0.1,I=0,D=0;
-void PID_caculate(uint16_t Set_Value,float Get_Value,int c) 
-{ 
-    float g_fDirectionControlOut1=0;
-    V_error=Set_Value-Get_Value;
-    g_fDirectionControlOut1=P*(V_error-sptr->V_lasterror)+I*V_error+D*(V_error-2*sptr->V_lasterror+sptr->V_preserror);
-    sptr->V_preserror =sptr->V_lasterror;       
-    sptr->V_lasterror = V_error;  
-   // if(g_fDirectionControlOut1>200)g_fDirectionControlOut2  +=200;
-    //else if(g_fDirectionControlOut1<-200)g_fDirectionControlOut2  +=-200;
-   // else
-    g_fDirectionControlOut2  +=  g_fDirectionControlOut1;
-    g_fDirectionControlOutOld = g_fDirectionControlOutNew;
-    g_fDirectionControlOutNew =g_fDirectionControlOut2;
-    //if(g_fDirectionControlOutNew<6000)g_fDirectionControlOutNew=6000;
-    //else if(g_fDirectionControlOutNew>8000)g_fDirectionControlOutNew=8000;
-   // printf(" 2=%f  new=%f  out1=%f     V_error=%f  \r\n",g_fDirectionControlOut2,g_fDirectionControlOutNew,g_fDirectionControlOut1,V_error);
-    //FTM_PWM_ChangeDuty(HW_FTM2, HW_FTM_CH0,g_fDirectionControlOutNew); 
-    if(c==1) 
-    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,g_fDirectionControlOutNew); // 0 - 10000  to 0% - 100%   ×óÂÖ
-    if(c==2)
-    FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,g_fDirectionControlOutNew); // 0 - 10000  to 0% - 100% ÓÒÂÖ
 
-}
-    uint32_t LeftSpeed;
-    int RightSpeed;//³ËÒÔ0.06Îªµ±Ç°ËÙ¶È
+void PID_caculate(uint16_t Set_Value,float Get_Value,int c) 
+{     
+    int lubangPWM = 0,lubang = 1;
+    V_error=Set_Value-Get_Value;
+    if(V_error >= 8){ lubangPWM = 7800; lubang = 0;}
+    else if(V_error <= -8) {lubangPWM = 5200; lubang = 0;}
+    
+    if(c == 1){
+        pl = P*(V_error-sptr->V_llasterror);
+        il = I*V_error;
+        dl = D*(V_error-2*sptr->V_llasterror+sptr->V_lpreserror);
+        g_fDirectionControlOutl1=P*(V_error-sptr->V_llasterror)+I*V_error+D*(V_error-2*sptr->V_llasterror+sptr->V_lpreserror);
+        sptr->V_lpreserror =sptr->V_llasterror;       
+        sptr->V_llasterror = V_error;  
+        g_fDirectionControlOutl2  +=  g_fDirectionControlOutl1;
+        g_fDirectionControlOutlNew =g_fDirectionControlOutl1;
+        if(g_fDirectionControlOutlNew<-100)g_fDirectionControlOutlNew=-100;
+        else if(g_fDirectionControlOutlNew>100)g_fDirectionControlOutlNew=100;
+        
+        loutPWM = loutPWMold+g_fDirectionControlOutlNew;
+        if(loutPWM<5000)loutPWM=5000;
+        else if(loutPWM>8000)loutPWM=8000;
+        loutPWMold = loutPWM;
+        if(lubang == 0) loutPWM = lubangPWM;
+        FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH1,loutPWM); // 0 - 10000  to 0% - 100%   ×óÂÖ
+    }
+    else if(c == 2){
+        pr = P*(V_error-sptr->V_rlasterror);
+        ir = I*V_error;
+        dr = D*(V_error-2*sptr->V_rlasterror+sptr->V_rpreserror);
+        g_fDirectionControlOutr1=P*(V_error-sptr->V_rlasterror)+I*V_error+D*(V_error-2*sptr->V_rlasterror+sptr->V_rpreserror);
+        sptr->V_rpreserror =sptr->V_rlasterror;       
+        sptr->V_rlasterror = V_error;  
+        g_fDirectionControlOutr2  +=  g_fDirectionControlOutr1;
+        g_fDirectionControlOutrNew =g_fDirectionControlOutr1;
+        if(g_fDirectionControlOutrNew<-100)g_fDirectionControlOutrNew=-100;
+        else if(g_fDirectionControlOutrNew>100)g_fDirectionControlOutrNew=100;
+        
+        routPWM = routPWMold+g_fDirectionControlOutrNew;
+        if(routPWM<5000)routPWM=5000;
+        else if(routPWM>8000)routPWM=8000;
+        routPWMold = routPWM;
+        if(lubang == 0) routPWM = lubangPWM;
+        FTM_PWM_ChangeDuty(HW_FTM1, HW_FTM_CH0,routPWM); // 0 - 10000  to 0% - 100% ÓÒÂÖ
+    }
+    
+} 
+
+
+  uint32_t LeftSpeed;
+  int RightSpeed;//3?ò?0.06?aµ±?°?ù?è
 static void PIT_ISR(void)
 {
     uint8_t a;
@@ -177,11 +208,12 @@ static void PIT_ISR(void)
     FTM_QD_ClearCount(HW_FTM2);
     LeftSpeed = LPTMR_PC_ReadCounter(); //»ñµÃLPTMRÄ£¿éµÄ¼ÆÊýÖµ
     LPTMR_ClearCounter();  //¼ÆÊýÆ÷¹éÁã
-    PID_caculate(33,LeftSpeed,1);
-    //PID_caculate(50,RightSpeed,2);
+    PID_caculate(20,LeftSpeed,1);
+    PID_caculate(20,RightSpeed,2);
     //OLED_showint2char(83,1,value);
        
 }
+
 
 int SCCB_Init(uint32_t I2C_MAP)
 {
@@ -506,7 +538,7 @@ int main(void)
        FTM_PWM_QuickInit(FTM0_CH3_PC04, kPWM_EdgeAligned,100);
      //FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,8640);//right
      FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,8480);//stright
-     //FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,8400); //leftn
+     //FTM_PWM_ChangeDuty(HW_FTM0, HW_FTM_CH3,8320); //leftn
     
     /*µç»úÇý¶¯*/
     //GPIO_QuickInit(HW_GPIOA, 1, kGPIO_Mode_OPP);
@@ -553,20 +585,35 @@ int main(void)
          camera_get_image();
          SerialDispCCDImage(80,60,gpHREF,upDateImage);
         //OLED_DrawBMP(80,60,gpHREF);
-          
         handle(up_gpHREF,PWM_Motor,steer_q,steer_w,motor_e,motor_f);
-         //show(upDateImage,gpHREF);
+        //show(upDateImage,gpHREF);
         if(a==20)
         {
         OLED_DrawBMP(0,0,OV7620_H,OV7620_W,upDateImage);
         //printf("LPTMR:%dHz\r\n", value);
-        //OLED_showint2char(83,0,(int)(LeftSpeed));
-        //OLED_showint2char(83,1,(int)(RightSpeed));   
+      OLED_showint2char(83,0,(int)LeftSpeed);  
+            OLED_showint2char(83,1,(int)(loutPWM));  
+            OLED_showint2char(83,2,(int)(RightSpeed));  
+            OLED_showint2char(83,3,(int)(routPWM));  
+            
+            printf("P*(V_error-sptr->V_llasterror) = %f\r\n",pl);
+            printf("I*V_error           = %f\r\n",il);
+            printf("D*(V_error-2*sptr->V_llasterror+sptr->V_lpreserror) = %f\r\n",dl);
+            printf("LeftSpeed                                               = %d\r\n",LeftSpeed);
+            printf("loutPWM =              6800+10*g_fDirectionControlOutlNew = %d\r\n",loutPWM);
+            printf("P*(V_error-sptr->V_rlasterror) = %f\r\n",pr);
+            printf("I*V_error           = %f\r\n",il);
+            printf("D*(V_error-2*sptr->V_rlasterror+sptr->V_rpreserror) = %f\r\n",dr);
+            printf("RightSpeed                                               = %d\r\n",RightSpeed);
+            printf("routPWM =              6800+10*g_fDirectionControlOutrNew = %d\r\n",routPWM);
+            printf("\r\n"); 
+            
+                 //  printf("PWM_Motor+g_fDirectionControlOutNew=%f\r\n",PWM_Motor+g_fDirectionControlOutNew);
         //OLED_showint2char(83,0,z);
         //OLED_showint2char(83,1,(int)(steer_q*100));
         //OLED_showint2char(83,2,(int)(steer_w*100));
         //OLED_showint2char(83,3,(int)(motor_e*100));
-        //OLED_showint2char(83,4,(int)(motor_f*100));       
+        //OLED_showint2char(83,4,(int)(motor_f*100));  
         a=0;
         }
         else
